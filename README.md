@@ -1,90 +1,186 @@
-# Welcome to GitHub
+# Torso S-4 VST Plugin
 
-Welcome to GitHub—where millions of developers work together on software. Ready to get started? Let’s learn how this all works by building and publishing your first GitHub Pages website!
+A VST3 plugin that mimics the Torso Electronics S-4 Sculpting Sampler for use in Ableton Live and other DAWs.
 
-## Repositories
+## Overview
 
-Right now, we’re in your first GitHub **repository**. A repository is like a folder or storage space for your project. Your project's repository contains all its files such as code, documentation, images, and more. It also tracks every change that you—or your collaborators—make to each file, so you can always go back to previous versions of your project if you make any mistakes.
+The Torso S-4 is a professional sculpting sampler with 4 parallel stereo tracks, each containing a chain of 5 audio devices for comprehensive sound manipulation. This plugin implements a single-track prototype with all 5 audio devices in series.
 
-This repository contains three important files: The HTML code for your first website on GitHub, the CSS stylesheet that decorates your website with colors and fonts, and the **README** file. It also contains an image folder, with one image file.
+## Features
 
-## Describe your project
+### Device Chain (Signal Flow)
 
-You are currently viewing your project's **README** file. **_README_** files are like cover pages or elevator pitches for your project. They are written in plain text or [Markdown language](https://guides.github.com/features/mastering-markdown/), and usually include a paragraph describing the project, directions on how to use it, who authored it, and more.
+Each track processes audio through 5 devices in series:
 
-[Learn more about READMEs](https://help.github.com/en/articles/about-readmes)
+1. **MATERIAL** - Tape recorder/looping OR polyphonic sampler
+   - Tape mode: Live recording, looping, overdubbing (6 minutes max)
+   - Poly mode: 8-voice polyphonic sampler with MIDI control
+   - ADSR envelope controls for poly mode
+   - Gain control
 
-## Your first website
+2. **GRANULAR (Mosaic)** - Grain sculpting processor
+   - Grain size: 1-500ms
+   - Grain density: 1-128 grains
+   - Pitch shifting: ±36 semitones
+   - Grain spread/randomization
+   - 4-second circular buffer
+   - Dry/wet mix control
 
-**GitHub Pages** is a free and easy way to create a website using the code that lives in your GitHub repositories. You can use GitHub Pages to build a portfolio of your work, create a personal website, or share a fun project that you coded with the world. GitHub Pages is automatically enabled in this repository, but when you create new repositories in the future, the steps to launch a GitHub Pages website will be slightly different.
+3. **FILTER (Ring)** - Morphing resonant filter
+   - Frequency control: 20Hz - 20kHz
+   - Resonance/Q control
+   - Filter morph: Lowpass → Bandpass → Highpass
+   - Decay control for resonance behavior
 
-[Learn more about GitHub Pages](https://pages.github.com/)
+4. **DISTORTION (Deform)** - Multi-mode color processor
+   - Drive/saturation
+   - Bit crushing (16-bit to 1-bit)
+   - Compression
+   - Noise generation
+   - Tilt EQ (balance low/high frequencies)
 
-## Rename this repository to publish your site
+5. **SPACE (Vast)** - Combined reverb and delay
+   - Stereo delay with feedback (0-2000ms)
+   - Reverb with size and damping controls
+   - Freeze mode for infinite reverb
+   - Dry/wet mix control
 
-We've already set-up a GitHub Pages website for you, based on your personal username. This repository is called `hello-world`, but you'll rename it to: `username.github.io`, to match your website's URL address. If the first part of the repository doesn’t exactly match your username, it won’t work, so make sure to get it right.
+### Modulation System
 
-Let's get started! To update this repository’s name, click the `Settings` tab on this page. This will take you to your repository’s settings page. 
+Basic modulation system with 4 modulator slots:
+- 2 LFOs (0.5 Hz and 2 Hz)
+- 2 Random modulators
 
-![repo-settings-image](https://user-images.githubusercontent.com/18093541/63130482-99e6ad80-bf88-11e9-99a1-d3cf1660b47e.png)
+*Note: Parameter mapping for modulators is planned for future development.*
 
-Under the **Repository Name** heading, type: `username.github.io`, where username is your username on GitHub. Then click **Rename**—and that’s it. When you’re done, click your repository name or browser’s back button to return to this page.
+## Building the Plugin
 
-<img width="1039" alt="rename_screenshot" src="https://user-images.githubusercontent.com/18093541/63129466-956cc580-bf85-11e9-92d8-b028dd483fa5.png">
+### Prerequisites
 
-Once you click **Rename**, your website will automatically be published at: https://your-username.github.io/. The HTML file—called `index.html`—is rendered as the home page and you'll be making changes to this file in the next step.
+- CMake 3.22 or higher
+- C++17 compatible compiler (GCC, Clang, MSVC)
+- Git
 
-Congratulations! You just launched your first GitHub Pages website. It's now live to share with the entire world
+### Build Instructions
 
-## Making your first edit
+```bash
+# Clone the repository
+git clone <repository-url>
+cd hello-world
 
-When you make any change to any file in your project, you’re making a **commit**. If you fix a typo, update a filename, or edit your code, you can add it to GitHub as a commit. Your commits represent your project’s entire history—and they’re all saved in your project’s repository.
+# Create build directory
+mkdir build
+cd build
 
-With each commit, you have the opportunity to write a **commit message**, a short, meaningful comment describing the change you’re making to a file. So you always know exactly what changed, no matter when you return to a commit.
+# Configure with CMake
+cmake ..
 
-## Practice: Customize your first GitHub website by writing HTML code
+# Build
+cmake --build . --config Release
 
-Want to edit the site you just published? Let’s practice commits by introducing yourself in your `index.html` file. Don’t worry about getting it right the first time—you can always build on your introduction later.
+# The VST3 plugin will be in:
+# - Windows: build/TorsoS4_artefacts/Release/VST3/
+# - macOS: build/TorsoS4_artefacts/Release/VST3/
+# - Linux: build/TorsoS4_artefacts/VST3/
+```
 
-Let’s start with this template:
+### Installing the Plugin
+
+**Ableton Live (Windows):**
+```
+Copy the VST3 to: C:\Program Files\Common Files\VST3\
+```
+
+**Ableton Live (macOS):**
+```
+Copy the VST3 to: /Library/Audio/Plug-Ins/VST3/
+or: ~/Library/Audio/Plug-Ins/VST3/
+```
+
+**Ableton Live (Linux):**
+```
+Copy the VST3 to: ~/.vst3/
+```
+
+## Usage
+
+1. Load the plugin in your DAW as an audio effect or instrument
+2. In **Material** mode:
+   - **Tape mode**: Processes incoming audio with looping
+   - **Poly mode**: Responds to MIDI input with 8-voice polyphony
+3. Adjust each device's parameters to sculpt your sound
+4. The signal flows through all 5 devices in series: Material → Granular → Filter → Distortion → Space
+5. Use the **Master Volume** to control the final output level
+
+## Technical Specifications
+
+- **Sample Rate**: 24-bit / 48kHz (or host sample rate)
+- **Channels**: Stereo I/O
+- **Format**: VST3, Standalone
+- **MIDI**: Input supported for poly mode
+- **Latency**: Minimal (buffer-dependent)
+
+## Architecture
+
+The plugin is built using:
+- **JUCE Framework** (v7.0.12) - Cross-platform audio framework
+- **CMake** - Build system
+- **C++17** - Programming language
+
+### Project Structure
 
 ```
-<p>Hello World! I’m [username]. This is my website!</p>
+hello-world/
+├── CMakeLists.txt              # Build configuration
+├── Source/
+│   ├── PluginProcessor.h/cpp   # Main audio processor
+│   ├── PluginEditor.h/cpp      # GUI interface
+│   └── DSP/                    # DSP modules
+│       ├── MaterialDevice.h/cpp
+│       ├── GranularDevice.h/cpp
+│       ├── FilterDevice.h/cpp
+│       ├── DistortionDevice.h/cpp
+│       ├── SpaceDevice.h/cpp
+│       └── ModulationSystem.h/cpp
+└── README.md
 ```
 
-To add your introduction, copy our template and click the edit pencil icon at the top right hand corner of the `index.html` file.
+## Roadmap
 
-<img width="997" alt="edit-this-file" src="https://user-images.githubusercontent.com/18093541/63131820-0794d880-bf8d-11e9-8b3d-c096355e9389.png">
+### Current Prototype Features ✅
+- Single track with all 5 devices
+- Basic modulation system
+- All core DSP implementations
+- Full parameter control via GUI
 
+### Planned Enhancements 🚧
+- [ ] 4 parallel tracks (full S-4 architecture)
+- [ ] Modulator-to-parameter mapping system
+- [ ] Scene storage and recall (128 scenes)
+- [ ] Performance macros (12 mappable macros)
+- [ ] Sample loading and management
+- [ ] Advanced tape recording features
+- [ ] MIDI CC mapping
+- [ ] Preset management
+- [ ] Visual feedback and metering
+- [ ] Euclidean pattern generator (inspired by Torso T-1)
 
-Delete this placeholder line:
+## Credits
 
-```
-<p>Welcome to your first GitHub Pages website!</p>
-```
+Inspired by the **Torso Electronics S-4 Sculpting Sampler**.
 
-Then, paste the template to line 15 and fill in the blanks.
+This is an independent, unofficial recreation and is not affiliated with or endorsed by Torso Electronics.
 
-<img width="1032" alt="edit-githuboctocat-index" src="https://user-images.githubusercontent.com/18093541/63132339-c3a2d300-bf8e-11e9-8222-59c2702f6c42.png">
+## License
 
+This project is provided as-is for educational and creative purposes.
 
-When you’re done, scroll down to the `Commit changes` section near the bottom of the edit page. Add a short message explaining your change, like "Add my introduction", then click `Commit changes`.
+## Resources
 
+- [Torso Electronics Official Website](https://torsoelectronics.com/)
+- [Sound on Sound S-4 Review](https://www.soundonsound.com/reviews/torso-electronics-s-4)
+- [JUCE Framework](https://juce.com/)
 
-<img width="1030" alt="add-my-username" src="https://user-images.githubusercontent.com/18093541/63131801-efbd5480-bf8c-11e9-9806-89273f027d16.png">
+---
 
-Once you click `Commit changes`, your changes will automatically be published on your GitHub Pages website. Refresh the page to see your new changes live in action.
-
-:tada: You just made your first commit! :tada:
-
-## Extra Credit: Keep on building!
-
-Change the placeholder Octocat gif on your GitHub Pages website by [creating your own personal Octocat emoji](https://myoctocat.com/build-your-octocat/) or [choose a different Octocat gif from our logo library here](https://octodex.github.com/). Add that image to line 12 of your `index.html` file, in place of the `<img src=` link.
-
-Want to add even more code and fun styles to your GitHub Pages website? [Follow these instructions](https://github.com/github/personal-website) to build a fully-fledged static website.
-
-![octocat](./images/create-octocat.png)
-
-## Everything you need to know about GitHub
-
-Getting started is the hardest part. If there’s anything you’d like to know as you get started with GitHub, try searching [GitHub Help](https://help.github.com). Our documentation has tutorials on everything from changing your repository settings to configuring GitHub from your command line.
+**Note**: This is a single-track prototype. The full Torso S-4 hardware features 4 independent tracks with cross-modulation, scene management, and more advanced features that may be implemented in future versions.
