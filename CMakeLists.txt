@@ -5,6 +5,11 @@ project(TorsoS4Plugin VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Build universal binary for macOS (Intel + Apple Silicon)
+if(APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for macOS")
+endif()
+
 # Fetch JUCE from GitHub
 include(FetchContent)
 FetchContent_Declare(

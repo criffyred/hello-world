@@ -50,19 +50,32 @@ jobs:
         echo "=== Looking for artefacts directory ==="
         find build -type d -name "*artefact*" -o -type d -name "*artifact*" || true
 
-    - name: Package VST3
+    - name: Code Sign VST3
       run: |
-        # Find the VST3 plugin (search entire workspace, account for spaces in filename)
+        # Find the VST3 plugin
         VST3_PATH=$(find . -name "*.vst3" -type d -path "*/VST3/*" | head -n 1)
         if [ -z "$VST3_PATH" ]; then
           echo "Error: VST3 plugin not found!"
-          echo "Searching for any .vst3 files:"
-          find . -name "*.vst3"
-          echo "All files in build directory:"
-          find build -type f | head -50
           exit 1
         fi
         echo "Found VST3 at: $VST3_PATH"
+
+        # Ad-hoc code sign the plugin (allows it to run on macOS without developer cert)
+        echo "Code signing plugin..."
+        codesign --force --deep --sign - "$VST3_PATH"
+
+        # Verify signature
+        echo "Verifying signature..."
+        codesign --verify --verbose "$VST3_PATH"
+
+        # Show code signing info
+        codesign -dvvv "$VST3_PATH"
+
+    - name: Package VST3
+      run: |
+        # Find the VST3 plugin
+        VST3_PATH=$(find . -name "*.vst3" -type d -path "*/VST3/*" | head -n 1)
+        echo "Packaging VST3 at: $VST3_PATH"
 
         # Package it
         cd $(dirname "$VST3_PATH")
