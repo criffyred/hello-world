@@ -1,257 +1,396 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
 TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& p, juce::AudioProcessorValueTreeState& vts)
-    : AudioProcessorEditor(&p),
-      audioProcessor(p),
-      parameters(vts),
-      materialSection("MATERIAL", "|||•"),
-      granularSection("GRANULAR", "∴"),
-      filterSection("FILTER", "⌢"),
-      distortionSection("COLOR", "⌇"),
-      spaceSection("SPACE", "⌯")
+    : AudioProcessorEditor(&p), audioProcessor(p), parameters(vts)
 {
-    // Apply custom look and feel
-    setLookAndFeel(&torsoLookAndFeel);
+    setSize(1100, 750);
 
-    setSize(1200, 800);
+    // Setup rotary knob function
+    auto setupKnob = [](juce::Slider& slider, juce::Label& label, const juce::String& text)
+    {
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+        label.setText(text, juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+    };
 
-    // Waveform Display
+    // Waveform
     addAndMakeVisible(waveformDisplay);
-
-    // Connect waveform display to material device for sample loading
     waveformDisplay.onFileLoaded = [this](const juce::File& file)
     {
         juce::AudioFormatManager formatManager;
         formatManager.registerBasicFormats();
-
         std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
         if (reader != nullptr)
         {
             juce::AudioBuffer<float> tempBuffer;
-            tempBuffer.setSize(static_cast<int>(reader->numChannels),
-                             static_cast<int>(reader->lengthInSamples));
+            tempBuffer.setSize(static_cast<int>(reader->numChannels), static_cast<int>(reader->lengthInSamples));
             reader->read(&tempBuffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
-
-            // Load sample into Material Device
             audioProcessor.getMaterialDevice().loadSample(tempBuffer);
         }
     };
 
-    // Material Device Section
-    addAndMakeVisible(materialSection);
+    // Material
+    materialLabel.setText("|||... MATERIAL", juce::dontSendNotification);
+    materialLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    materialLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00d4ff));
+    addAndMakeVisible(materialLabel);
 
     materialModeCombo.addItem("Tape", 1);
     materialModeCombo.addItem("Poly", 2);
     materialModeCombo.addItem("Bypass", 3);
-    setupComboBox(materialModeCombo, materialModeLabel, "Mode");
-    materialSection.addCombo(&materialModeCombo, &materialModeLabel);
-    materialModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(parameters, "material_mode", materialModeCombo);
+    materialModeLabel.setText("Mode", juce::dontSendNotification);
+    materialModeLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(materialModeCombo);
+    addAndMakeVisible(materialModeLabel);
+    materialModeAttachment.reset(new juce::AudioProcessorValueTreeState::ComboBoxAttachment(parameters, "material_mode", materialModeCombo));
 
-    setupRotaryKnob(materialGainSlider, materialGainLabel, "Gain");
-    materialSection.addKnob(&materialGainSlider, &materialGainLabel);
-    materialGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_gain", materialGainSlider);
+    setupKnob(materialGainSlider, materialGainLabel, "Gain");
+    addAndMakeVisible(materialGainSlider);
+    addAndMakeVisible(materialGainLabel);
+    materialGainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "material_gain", materialGainSlider));
 
-    setupRotaryKnob(materialAttackSlider, materialAttackLabel, "Attack");
-    materialSection.addKnob(&materialAttackSlider, &materialAttackLabel);
-    materialAttackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_poly_attack", materialAttackSlider);
+    setupKnob(materialAttackSlider, materialAttackLabel, "Attack");
+    addAndMakeVisible(materialAttackSlider);
+    addAndMakeVisible(materialAttackLabel);
+    materialAttackAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "material_poly_attack", materialAttackSlider));
 
-    setupRotaryKnob(materialReleaseSlider, materialReleaseLabel, "Release");
-    materialSection.addKnob(&materialReleaseSlider, &materialReleaseLabel);
-    materialReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_poly_release", materialReleaseSlider);
+    setupKnob(materialReleaseSlider, materialReleaseLabel, "Release");
+    addAndMakeVisible(materialReleaseSlider);
+    addAndMakeVisible(materialReleaseLabel);
+    materialReleaseAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "material_poly_release", materialReleaseSlider));
 
-    setupRotaryKnob(materialTapeSpeedSlider, materialTapeSpeedLabel, "Tape Speed");
-    materialSection.addKnob(&materialTapeSpeedSlider, &materialTapeSpeedLabel);
-    materialTapeSpeedAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_tape_speed", materialTapeSpeedSlider);
+    setupKnob(materialTapeSpeedSlider, materialTapeSpeedLabel, "Speed");
+    addAndMakeVisible(materialTapeSpeedSlider);
+    addAndMakeVisible(materialTapeSpeedLabel);
+    materialTapeSpeedAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "material_tape_speed", materialTapeSpeedSlider));
 
-    // Granular Device Section
-    addAndMakeVisible(granularSection);
+    // Granular
+    granularLabel.setText("∴ GRANULAR", juce::dontSendNotification);
+    granularLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    granularLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00d4ff));
+    addAndMakeVisible(granularLabel);
 
-    setupRotaryKnob(granularSizeSlider, granularSizeLabel, "Grain Size");
-    granularSection.addKnob(&granularSizeSlider, &granularSizeLabel);
-    granularSizeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "granular_grainsize", granularSizeSlider);
+    setupKnob(granularSizeSlider, granularSizeLabel, "Size");
+    addAndMakeVisible(granularSizeSlider);
+    addAndMakeVisible(granularSizeLabel);
+    granularSizeAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "granular_grainsize", granularSizeSlider));
 
-    setupRotaryKnob(granularDensitySlider, granularDensityLabel, "Density");
-    granularSection.addKnob(&granularDensitySlider, &granularDensityLabel);
-    granularDensityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "granular_density", granularDensitySlider);
+    setupKnob(granularDensitySlider, granularDensityLabel, "Density");
+    addAndMakeVisible(granularDensitySlider);
+    addAndMakeVisible(granularDensityLabel);
+    granularDensityAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "granular_density", granularDensitySlider));
 
-    setupRotaryKnob(granularPitchSlider, granularPitchLabel, "Pitch");
-    granularSection.addKnob(&granularPitchSlider, &granularPitchLabel);
-    granularPitchAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "granular_pitch", granularPitchSlider);
+    setupKnob(granularPitchSlider, granularPitchLabel, "Pitch");
+    addAndMakeVisible(granularPitchSlider);
+    addAndMakeVisible(granularPitchLabel);
+    granularPitchAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "granular_pitch", granularPitchSlider));
 
-    setupRotaryKnob(granularSpreadSlider, granularSpreadLabel, "Spread");
-    granularSection.addKnob(&granularSpreadSlider, &granularSpreadLabel);
-    granularSpreadAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "granular_spread", granularSpreadSlider);
+    setupKnob(granularSpreadSlider, granularSpreadLabel, "Spread");
+    addAndMakeVisible(granularSpreadSlider);
+    addAndMakeVisible(granularSpreadLabel);
+    granularSpreadAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "granular_spread", granularSpreadSlider));
 
-    setupRotaryKnob(granularMixSlider, granularMixLabel, "Mix");
-    granularSection.addKnob(&granularMixSlider, &granularMixLabel);
-    granularMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "granular_mix", granularMixSlider);
+    setupKnob(granularMixSlider, granularMixLabel, "Mix");
+    addAndMakeVisible(granularMixSlider);
+    addAndMakeVisible(granularMixLabel);
+    granularMixAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "granular_mix", granularMixSlider));
 
-    // Filter Device Section
-    addAndMakeVisible(filterSection);
+    // Filter
+    filterLabel.setText("⌢ FILTER", juce::dontSendNotification);
+    filterLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    filterLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00d4ff));
+    addAndMakeVisible(filterLabel);
 
-    setupRotaryKnob(filterFreqSlider, filterFreqLabel, "Frequency");
-    filterSection.addKnob(&filterFreqSlider, &filterFreqLabel);
-    filterFreqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_frequency", filterFreqSlider);
+    setupKnob(filterFreqSlider, filterFreqLabel, "Freq");
+    addAndMakeVisible(filterFreqSlider);
+    addAndMakeVisible(filterFreqLabel);
+    filterFreqAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "filter_frequency", filterFreqSlider));
 
-    setupRotaryKnob(filterResSlider, filterResLabel, "Resonance");
-    filterSection.addKnob(&filterResSlider, &filterResLabel);
-    filterResAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_resonance", filterResSlider);
+    setupKnob(filterResSlider, filterResLabel, "Res");
+    addAndMakeVisible(filterResSlider);
+    addAndMakeVisible(filterResLabel);
+    filterResAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "filter_resonance", filterResSlider));
 
-    setupRotaryKnob(filterMorphSlider, filterMorphLabel, "Morph");
-    filterSection.addKnob(&filterMorphSlider, &filterMorphLabel);
-    filterMorphAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_morph", filterMorphSlider);
+    setupKnob(filterMorphSlider, filterMorphLabel, "Morph");
+    addAndMakeVisible(filterMorphSlider);
+    addAndMakeVisible(filterMorphLabel);
+    filterMorphAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "filter_morph", filterMorphSlider));
 
-    setupRotaryKnob(filterDecaySlider, filterDecayLabel, "Decay");
-    filterSection.addKnob(&filterDecaySlider, &filterDecayLabel);
-    filterDecayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_decay", filterDecaySlider);
+    setupKnob(filterDecaySlider, filterDecayLabel, "Decay");
+    addAndMakeVisible(filterDecaySlider);
+    addAndMakeVisible(filterDecayLabel);
+    filterDecayAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "filter_decay", filterDecaySlider));
 
-    setupRotaryKnob(filterMixSlider, filterMixLabel, "Mix");
-    filterSection.addKnob(&filterMixSlider, &filterMixLabel);
-    filterMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_mix", filterMixSlider);
+    setupKnob(filterMixSlider, filterMixLabel, "Mix");
+    addAndMakeVisible(filterMixSlider);
+    addAndMakeVisible(filterMixLabel);
+    filterMixAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "filter_mix", filterMixSlider));
 
-    // Distortion Device Section
-    addAndMakeVisible(distortionSection);
+    // Distortion
+    distortionLabel.setText("⌇ COLOR", juce::dontSendNotification);
+    distortionLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    distortionLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00d4ff));
+    addAndMakeVisible(distortionLabel);
 
-    setupRotaryKnob(distDriveSlider, distDriveLabel, "Drive");
-    distortionSection.addKnob(&distDriveSlider, &distDriveLabel);
-    distDriveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_drive", distDriveSlider);
+    setupKnob(distDriveSlider, distDriveLabel, "Drive");
+    addAndMakeVisible(distDriveSlider);
+    addAndMakeVisible(distDriveLabel);
+    distDriveAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_drive", distDriveSlider));
 
-    setupRotaryKnob(distBitcrushSlider, distBitcrushLabel, "Bit Crush");
-    distortionSection.addKnob(&distBitcrushSlider, &distBitcrushLabel);
-    distBitcrushAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_bitcrush", distBitcrushSlider);
+    setupKnob(distBitcrushSlider, distBitcrushLabel, "Bits");
+    addAndMakeVisible(distBitcrushSlider);
+    addAndMakeVisible(distBitcrushLabel);
+    distBitcrushAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_bitcrush", distBitcrushSlider));
 
-    setupRotaryKnob(distCompressSlider, distCompressLabel, "Compress");
-    distortionSection.addKnob(&distCompressSlider, &distCompressLabel);
-    distCompressAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_compress", distCompressSlider);
+    setupKnob(distCompressSlider, distCompressLabel, "Comp");
+    addAndMakeVisible(distCompressSlider);
+    addAndMakeVisible(distCompressLabel);
+    distCompressAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_compress", distCompressSlider));
 
-    setupRotaryKnob(distNoiseSlider, distNoiseLabel, "Noise");
-    distortionSection.addKnob(&distNoiseSlider, &distNoiseLabel);
-    distNoiseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_noise", distNoiseSlider);
+    setupKnob(distNoiseSlider, distNoiseLabel, "Noise");
+    addAndMakeVisible(distNoiseSlider);
+    addAndMakeVisible(distNoiseLabel);
+    distNoiseAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_noise", distNoiseSlider));
 
-    setupRotaryKnob(distTiltSlider, distTiltLabel, "Tilt");
-    distortionSection.addKnob(&distTiltSlider, &distTiltLabel);
-    distTiltAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_tilt", distTiltSlider);
+    setupKnob(distTiltSlider, distTiltLabel, "Tilt");
+    addAndMakeVisible(distTiltSlider);
+    addAndMakeVisible(distTiltLabel);
+    distTiltAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_tilt", distTiltSlider));
 
-    setupRotaryKnob(distMixSlider, distMixLabel, "Mix");
-    distortionSection.addKnob(&distMixSlider, &distMixLabel);
-    distMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_mix", distMixSlider);
+    setupKnob(distMixSlider, distMixLabel, "Mix");
+    addAndMakeVisible(distMixSlider);
+    addAndMakeVisible(distMixLabel);
+    distMixAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "dist_mix", distMixSlider));
 
-    // Space Device Section
-    addAndMakeVisible(spaceSection);
+    // Space
+    spaceLabel.setText("⌯ SPACE", juce::dontSendNotification);
+    spaceLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    spaceLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00d4ff));
+    addAndMakeVisible(spaceLabel);
 
-    setupRotaryKnob(spaceDelayTimeSlider, spaceDelayTimeLabel, "Delay Time");
-    spaceSection.addKnob(&spaceDelayTimeSlider, &spaceDelayTimeLabel);
-    spaceDelayTimeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "space_delay_time", spaceDelayTimeSlider);
+    setupKnob(spaceDelayTimeSlider, spaceDelayTimeLabel, "Time");
+    addAndMakeVisible(spaceDelayTimeSlider);
+    addAndMakeVisible(spaceDelayTimeLabel);
+    spaceDelayTimeAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "space_delay_time", spaceDelayTimeSlider));
 
-    setupRotaryKnob(spaceDelayFeedbackSlider, spaceDelayFeedbackLabel, "Feedback");
-    spaceSection.addKnob(&spaceDelayFeedbackSlider, &spaceDelayFeedbackLabel);
-    spaceDelayFeedbackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "space_delay_feedback", spaceDelayFeedbackSlider);
+    setupKnob(spaceDelayFeedbackSlider, spaceDelayFeedbackLabel, "Feedback");
+    addAndMakeVisible(spaceDelayFeedbackSlider);
+    addAndMakeVisible(spaceDelayFeedbackLabel);
+    spaceDelayFeedbackAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "space_delay_feedback", spaceDelayFeedbackSlider));
 
-    setupRotaryKnob(spaceReverbSizeSlider, spaceReverbSizeLabel, "Reverb Size");
-    spaceSection.addKnob(&spaceReverbSizeSlider, &spaceReverbSizeLabel);
-    spaceReverbSizeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "space_reverb_size", spaceReverbSizeSlider);
+    setupKnob(spaceReverbSizeSlider, spaceReverbSizeLabel, "Size");
+    addAndMakeVisible(spaceReverbSizeSlider);
+    addAndMakeVisible(spaceReverbSizeLabel);
+    spaceReverbSizeAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "space_reverb_size", spaceReverbSizeSlider));
 
-    setupRotaryKnob(spaceReverbDampingSlider, spaceReverbDampingLabel, "Damping");
-    spaceSection.addKnob(&spaceReverbDampingSlider, &spaceReverbDampingLabel);
-    spaceReverbDampingAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "space_reverb_damping", spaceReverbDampingSlider);
+    setupKnob(spaceReverbDampingSlider, spaceReverbDampingLabel, "Damp");
+    addAndMakeVisible(spaceReverbDampingSlider);
+    addAndMakeVisible(spaceReverbDampingLabel);
+    spaceReverbDampingAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "space_reverb_damping", spaceReverbDampingSlider));
 
-    setupRotaryKnob(spaceMixSlider, spaceMixLabel, "Mix");
-    spaceSection.addKnob(&spaceMixSlider, &spaceMixLabel);
-    spaceMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "space_mix", spaceMixSlider);
+    setupKnob(spaceMixSlider, spaceMixLabel, "Mix");
+    addAndMakeVisible(spaceMixSlider);
+    addAndMakeVisible(spaceMixLabel);
+    spaceMixAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "space_mix", spaceMixSlider));
 
     spaceFreezeButton.setButtonText("Freeze");
-    spaceSection.addButton(&spaceFreezeButton);
-    spaceFreezeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(parameters, "space_freeze", spaceFreezeButton);
+    addAndMakeVisible(spaceFreezeButton);
+    spaceFreezeAttachment.reset(new juce::AudioProcessorValueTreeState::ButtonAttachment(parameters, "space_freeze", spaceFreezeButton));
 
-    // Master Volume
-    setupRotaryKnob(masterVolumeSlider, masterVolumeLabel, "Master Volume");
+    // Master
+    setupKnob(masterVolumeSlider, masterVolumeLabel, "Master");
     addAndMakeVisible(masterVolumeSlider);
     addAndMakeVisible(masterVolumeLabel);
-    masterVolumeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "master_volume", masterVolumeSlider);
+    masterVolumeAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "master_volume", masterVolumeSlider));
 }
 
 TorsoS4AudioProcessorEditor::~TorsoS4AudioProcessorEditor()
 {
-    setLookAndFeel(nullptr);
 }
 
-//==============================================================================
 void TorsoS4AudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff0a0a0a));
+    g.fillAll(juce::Colour(0xff1a1a1a));
 
-    // Title
-    g.setColour(juce::Colour(0xffe0e0e0));
-    g.setFont(juce::Font(18.0f, juce::Font::bold));
-    g.drawText("TORSO S-4 SCULPTING SAMPLER", getLocalBounds().removeFromTop(35), juce::Justification::centred, true);
-
-    // Signal flow arrows between devices
-    g.setColour(juce::Colour(0xff00d4ff).withAlpha(0.3f));
-    auto bounds = getLocalBounds().reduced(20);
-    bounds.removeFromTop(180); // Skip waveform area
-
-    for (int i = 0; i < 4; ++i)
-    {
-        auto arrowY = bounds.getY() + (i + 1) * 110 - 10;
-        juce::Path arrow;
-        arrow.startNewSubPath(bounds.getWidth() / 2.0f - 20, arrowY);
-        arrow.lineTo(bounds.getWidth() / 2.0f + 20, arrowY);
-        arrow.lineTo(bounds.getWidth() / 2.0f + 15, arrowY - 3);
-        arrow.startNewSubPath(bounds.getWidth() / 2.0f + 20, arrowY);
-        arrow.lineTo(bounds.getWidth() / 2.0f + 15, arrowY + 3);
-        g.strokePath(arrow, juce::PathStrokeType(1.5f));
-    }
+    g.setColour(juce::Colours::white);
+    g.setFont(18.0f);
+    g.drawText("TORSO S-4 SCULPTING SAMPLER", getLocalBounds().removeFromTop(35), juce::Justification::centred);
 }
 
 void TorsoS4AudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds().reduced(20);
-    bounds.removeFromTop(40); // Title space
+    auto bounds = getLocalBounds().reduced(15);
+    bounds.removeFromTop(35); // Title
 
-    // Waveform display (top 20%)
-    waveformDisplay.setBounds(bounds.removeFromTop(140));
-    bounds.removeFromTop(10);
+    // Waveform
+    waveformDisplay.setBounds(bounds.removeFromTop(120));
+    bounds.removeFromTop(5);
 
-    int sectionHeight = 100;
+    int knobSize = 70;
+    int spacing = 10;
 
-    // Device sections (each 12% of height)
-    materialSection.setBounds(bounds.removeFromTop(sectionHeight));
-    bounds.removeFromTop(10);
+    auto layoutRow = [&](juce::Label& sectionLabel, auto&... controls)
+    {
+        auto row = bounds.removeFromTop(90);
+        sectionLabel.setBounds(row.removeFromLeft(120));
 
-    granularSection.setBounds(bounds.removeFromTop(sectionHeight));
-    bounds.removeFromTop(10);
+        int totalWidth = 0;
+        int numControls = sizeof...(controls) / 2; // Divide by 2 because we have label+slider pairs
 
-    filterSection.setBounds(bounds.removeFromTop(sectionHeight));
-    bounds.removeFromTop(10);
+        auto processControl = [&](auto& label, auto& control)
+        {
+            auto controlBounds = row.removeFromLeft(knobSize + spacing);
+            label.setBounds(controlBounds.removeFromBottom(18));
+            control.setBounds(controlBounds.withHeight(knobSize));
+        };
 
-    distortionSection.setBounds(bounds.removeFromTop(sectionHeight));
-    bounds.removeFromTop(10);
+        (processControl(controls.first, controls.second), ...);
+    };
 
-    spaceSection.setBounds(bounds.removeFromTop(sectionHeight));
-    bounds.removeFromTop(10);
+    // Material (1 combo + 4 knobs)
+    {
+        auto row = bounds.removeFromTop(90);
+        materialLabel.setBounds(row.removeFromLeft(120));
 
-    // Master volume at bottom
-    auto masterBounds = bounds.removeFromBottom(80).withSizeKeepingCentre(120, 80);
-    masterVolumeLabel.setBounds(masterBounds.removeFromTop(15));
-    masterVolumeSlider.setBounds(masterBounds);
-}
+        auto combo1 = row.removeFromLeft(knobSize + spacing);
+        materialModeLabel.setBounds(combo1.removeFromBottom(18));
+        materialModeCombo.setBounds(combo1.removeFromTop(25));
 
-void TorsoS4AudioProcessorEditor::setupRotaryKnob(juce::Slider& slider, juce::Label& label, const juce::String& labelText)
-{
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 18);
-    slider.setLookAndFeel(&torsoLookAndFeel);
+        auto knob1 = row.removeFromLeft(knobSize + spacing);
+        materialGainLabel.setBounds(knob1.removeFromBottom(18));
+        materialGainSlider.setBounds(knob1.withHeight(knobSize));
 
-    label.setText(labelText, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.setFont(juce::Font(11.0f));
-}
+        auto knob2 = row.removeFromLeft(knobSize + spacing);
+        materialAttackLabel.setBounds(knob2.removeFromBottom(18));
+        materialAttackSlider.setBounds(knob2.withHeight(knobSize));
 
-void TorsoS4AudioProcessorEditor::setupComboBox(juce::ComboBox& combo, juce::Label& label, const juce::String& labelText)
-{
-    label.setText(labelText, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.setFont(juce::Font(11.0f));
+        auto knob3 = row.removeFromLeft(knobSize + spacing);
+        materialReleaseLabel.setBounds(knob3.removeFromBottom(18));
+        materialReleaseSlider.setBounds(knob3.withHeight(knobSize));
+
+        auto knob4 = row.removeFromLeft(knobSize + spacing);
+        materialTapeSpeedLabel.setBounds(knob4.removeFromBottom(18));
+        materialTapeSpeedSlider.setBounds(knob4.withHeight(knobSize));
+    }
+
+    // Granular (5 knobs)
+    {
+        auto row = bounds.removeFromTop(90);
+        granularLabel.setBounds(row.removeFromLeft(120));
+
+        auto knob1 = row.removeFromLeft(knobSize + spacing);
+        granularSizeLabel.setBounds(knob1.removeFromBottom(18));
+        granularSizeSlider.setBounds(knob1.withHeight(knobSize));
+
+        auto knob2 = row.removeFromLeft(knobSize + spacing);
+        granularDensityLabel.setBounds(knob2.removeFromBottom(18));
+        granularDensitySlider.setBounds(knob2.withHeight(knobSize));
+
+        auto knob3 = row.removeFromLeft(knobSize + spacing);
+        granularPitchLabel.setBounds(knob3.removeFromBottom(18));
+        granularPitchSlider.setBounds(knob3.withHeight(knobSize));
+
+        auto knob4 = row.removeFromLeft(knobSize + spacing);
+        granularSpreadLabel.setBounds(knob4.removeFromBottom(18));
+        granularSpreadSlider.setBounds(knob4.withHeight(knobSize));
+
+        auto knob5 = row.removeFromLeft(knobSize + spacing);
+        granularMixLabel.setBounds(knob5.removeFromBottom(18));
+        granularMixSlider.setBounds(knob5.withHeight(knobSize));
+    }
+
+    // Filter (5 knobs)
+    {
+        auto row = bounds.removeFromTop(90);
+        filterLabel.setBounds(row.removeFromLeft(120));
+
+        auto knob1 = row.removeFromLeft(knobSize + spacing);
+        filterFreqLabel.setBounds(knob1.removeFromBottom(18));
+        filterFreqSlider.setBounds(knob1.withHeight(knobSize));
+
+        auto knob2 = row.removeFromLeft(knobSize + spacing);
+        filterResLabel.setBounds(knob2.removeFromBottom(18));
+        filterResSlider.setBounds(knob2.withHeight(knobSize));
+
+        auto knob3 = row.removeFromLeft(knobSize + spacing);
+        filterMorphLabel.setBounds(knob3.removeFromBottom(18));
+        filterMorphSlider.setBounds(knob3.withHeight(knobSize));
+
+        auto knob4 = row.removeFromLeft(knobSize + spacing);
+        filterDecayLabel.setBounds(knob4.removeFromBottom(18));
+        filterDecaySlider.setBounds(knob4.withHeight(knobSize));
+
+        auto knob5 = row.removeFromLeft(knobSize + spacing);
+        filterMixLabel.setBounds(knob5.removeFromBottom(18));
+        filterMixSlider.setBounds(knob5.withHeight(knobSize));
+    }
+
+    // Distortion (6 knobs)
+    {
+        auto row = bounds.removeFromTop(90);
+        distortionLabel.setBounds(row.removeFromLeft(120));
+
+        auto knob1 = row.removeFromLeft(knobSize + spacing);
+        distDriveLabel.setBounds(knob1.removeFromBottom(18));
+        distDriveSlider.setBounds(knob1.withHeight(knobSize));
+
+        auto knob2 = row.removeFromLeft(knobSize + spacing);
+        distBitcrushLabel.setBounds(knob2.removeFromBottom(18));
+        distBitcrushSlider.setBounds(knob2.withHeight(knobSize));
+
+        auto knob3 = row.removeFromLeft(knobSize + spacing);
+        distCompressLabel.setBounds(knob3.removeFromBottom(18));
+        distCompressSlider.setBounds(knob3.withHeight(knobSize));
+
+        auto knob4 = row.removeFromLeft(knobSize + spacing);
+        distNoiseLabel.setBounds(knob4.removeFromBottom(18));
+        distNoiseSlider.setBounds(knob4.withHeight(knobSize));
+
+        auto knob5 = row.removeFromLeft(knobSize + spacing);
+        distTiltLabel.setBounds(knob5.removeFromBottom(18));
+        distTiltSlider.setBounds(knob5.withHeight(knobSize));
+
+        auto knob6 = row.removeFromLeft(knobSize + spacing);
+        distMixLabel.setBounds(knob6.removeFromBottom(18));
+        distMixSlider.setBounds(knob6.withHeight(knobSize));
+    }
+
+    // Space (5 knobs + button)
+    {
+        auto row = bounds.removeFromTop(90);
+        spaceLabel.setBounds(row.removeFromLeft(120));
+
+        auto knob1 = row.removeFromLeft(knobSize + spacing);
+        spaceDelayTimeLabel.setBounds(knob1.removeFromBottom(18));
+        spaceDelayTimeSlider.setBounds(knob1.withHeight(knobSize));
+
+        auto knob2 = row.removeFromLeft(knobSize + spacing);
+        spaceDelayFeedbackLabel.setBounds(knob2.removeFromBottom(18));
+        spaceDelayFeedbackSlider.setBounds(knob2.withHeight(knobSize));
+
+        auto knob3 = row.removeFromLeft(knobSize + spacing);
+        spaceReverbSizeLabel.setBounds(knob3.removeFromBottom(18));
+        spaceReverbSizeSlider.setBounds(knob3.withHeight(knobSize));
+
+        auto knob4 = row.removeFromLeft(knobSize + spacing);
+        spaceReverbDampingLabel.setBounds(knob4.removeFromBottom(18));
+        spaceReverbDampingSlider.setBounds(knob4.withHeight(knobSize));
+
+        auto knob5 = row.removeFromLeft(knobSize + spacing);
+        spaceMixLabel.setBounds(knob5.removeFromBottom(18));
+        spaceMixSlider.setBounds(knob5.withHeight(knobSize));
+
+        auto btn = row.removeFromLeft(knobSize + spacing);
+        spaceFreezeButton.setBounds(btn.withHeight(25));
+    }
+
+    // Master
+    {
+        auto row = bounds.removeFromTop(90);
+        row = row.withSizeKeepingCentre(knobSize + spacing, 90);
+        masterVolumeLabel.setBounds(row.removeFromBottom(18));
+        masterVolumeSlider.setBounds(row.withHeight(knobSize));
+    }
 }
