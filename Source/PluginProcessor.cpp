@@ -41,6 +41,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout TorsoS4AudioProcessor::creat
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "material_poly_release", "Poly Release",
         juce::NormalisableRange<float>(0.01f, 5.0f, 0.0f, 0.3f), 0.1f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "material_tape_speed", "Tape Speed",
+        juce::NormalisableRange<float>(0.25f, 4.0f, 0.0f, 0.3f), 1.0f));
 
     // Granular Device Parameters
     layout.add(std::make_unique<juce::AudioParameterFloat>(

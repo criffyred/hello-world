@@ -115,12 +115,13 @@ private:
     // Material Device Controls
     DeviceSection materialSection;
     juce::ComboBox materialModeCombo;
-    juce::Slider materialGainSlider, materialAttackSlider, materialReleaseSlider;
-    juce::Label materialGainLabel, materialAttackLabel, materialReleaseLabel, materialModeLabel;
+    juce::Slider materialGainSlider, materialAttackSlider, materialReleaseSlider, materialTapeSpeedSlider;
+    juce::Label materialGainLabel, materialAttackLabel, materialReleaseLabel, materialModeLabel, materialTapeSpeedLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> materialModeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> materialGainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> materialAttackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> materialReleaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> materialTapeSpeedAttachment;
 
     // Granular Device Controls
     DeviceSection granularSection;

@@ -66,8 +66,12 @@ void MaterialDevice::process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&
     auto gain = parameters.getRawParameterValue("material_gain")->load();
     auto attack = parameters.getRawParameterValue("material_poly_attack")->load();
     auto release = parameters.getRawParameterValue("material_poly_release")->load();
+    auto tapeSpeedParam = parameters.getRawParameterValue("material_tape_speed")->load();
 
     int numSamples = buffer.getNumSamples();
+
+    // Update tape speed from parameter
+    tapeSpeed = tapeSpeedParam;
 
     if (mode == 0) // Tape mode
     {

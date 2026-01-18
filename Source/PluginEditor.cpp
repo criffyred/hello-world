@@ -42,6 +42,10 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
     materialSection.addKnob(&materialReleaseSlider, &materialReleaseLabel);
     materialReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_poly_release", materialReleaseSlider);
 
+    setupRotaryKnob(materialTapeSpeedSlider, materialTapeSpeedLabel, "Tape Speed");
+    materialSection.addKnob(&materialTapeSpeedSlider, &materialTapeSpeedLabel);
+    materialTapeSpeedAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "material_tape_speed", materialTapeSpeedSlider);
+
     // Granular Device Section
     addAndMakeVisible(granularSection);
 
