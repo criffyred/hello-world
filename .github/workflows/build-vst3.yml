@@ -2,9 +2,13 @@ name: Build VST3 Plugin
 
 on:
   push:
-    branches: [ claude/vst-torso-s4-plugin-K3n6R ]
+    branches:
+      - claude/vst-torso-s4-plugin-K3n6R
+      - claude/remove-vst-plugin-piggK
   pull_request:
-    branches: [ claude/vst-torso-s4-plugin-K3n6R ]
+    branches:
+      - claude/vst-torso-s4-plugin-K3n6R
+      - claude/remove-vst-plugin-piggK
   workflow_dispatch:
 
 jobs:
