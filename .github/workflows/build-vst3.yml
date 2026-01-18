@@ -29,7 +29,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     - name: Build VST3
       run: |
@@ -59,6 +59,12 @@ jobs:
           exit 1
         fi
         echo "Found VST3 at: $VST3_PATH"
+
+        # Check architectures before signing
+        echo "Checking architectures..."
+        BINARY=$(find "$VST3_PATH" -type f -perm +111 | head -n 1)
+        lipo -info "$BINARY"
+        file "$BINARY"
 
         # Ad-hoc code sign the plugin (allows it to run on macOS without developer cert)
         echo "Code signing plugin..."
