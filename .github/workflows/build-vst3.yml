@@ -1,0 +1,58 @@
+name: Build VST3 Plugin
+
+on:
+  push:
+    branches: [ claude/vst-torso-s4-plugin-K3n6R ]
+  pull_request:
+    branches: [ claude/vst-torso-s4-plugin-K3n6R ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install CMake
+      run: |
+        brew install cmake
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build VST3
+      run: |
+        cd build
+        cmake --build . --config Release -j4
+
+    - name: List build artifacts
+      run: |
+        echo "Build artifacts:"
+        find build -name "*.vst3" -type d
+        ls -R build/TorsoS4_artefacts/
+
+    - name: Package VST3
+      run: |
+        cd build/TorsoS4_artefacts/Release/VST3
+        zip -r TorsoS4-macOS.zip TorsoS4.vst3
+        mv TorsoS4-macOS.zip $GITHUB_WORKSPACE/
+
+    - name: Upload VST3 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TorsoS4-VST3-macOS
+        path: TorsoS4-macOS.zip
+        retention-days: 30
+
+    - name: Build info
+      run: |
+        echo "✅ VST3 plugin built successfully for macOS!"
+        echo "📦 Download the artifact from the Actions tab above"
+        echo "📍 Install to: ~/Library/Audio/Plug-Ins/VST3/"
