@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "TorsoS4LookAndFeel.h"
+#include "WaveformDisplay.h"
 
 //==============================================================================
 class TorsoS4AudioProcessorEditor : public juce::AudioProcessorEditor
@@ -18,10 +20,95 @@ private:
     TorsoS4AudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
 
-    // Device sections (collapsible groups)
-    juce::GroupComponent materialGroup, granularGroup, filterGroup, distortionGroup, spaceGroup;
+    // Custom Look and Feel
+    TorsoS4LookAndFeel torsoLookAndFeel;
+
+    // Waveform Display
+    WaveformDisplay waveformDisplay;
+
+    // Device sections (custom components)
+    class DeviceSection : public juce::Component
+    {
+    public:
+        DeviceSection(const juce::String& deviceName) : name(deviceName) {}
+
+        void paint(juce::Graphics& g) override
+        {
+            auto bounds = getLocalBounds();
+
+            // Device name
+            g.setColour(juce::Colour(0xff00d4ff));
+            g.setFont(juce::Font(12.0f, juce::Font::bold));
+            g.drawText(name, bounds.removeFromTop(20), juce::Justification::centred);
+        }
+
+        void addKnob(juce::Slider* knob, juce::Label* label)
+        {
+            knobs.add(knob);
+            labels.add(label);
+            addAndMakeVisible(knob);
+            addAndMakeVisible(label);
+        }
+
+        void addCombo(juce::ComboBox* combo, juce::Label* label)
+        {
+            combos.add(combo);
+            labels.add(label);
+            addAndMakeVisible(combo);
+            addAndMakeVisible(label);
+        }
+
+        void addButton(juce::ToggleButton* button)
+        {
+            buttons.add(button);
+            addAndMakeVisible(button);
+        }
+
+        void resized() override
+        {
+            auto bounds = getLocalBounds();
+            bounds.removeFromTop(25); // Space for title
+
+            int numControls = knobs.size() + combos.size() + buttons.size();
+            if (numControls == 0) return;
+
+            int controlWidth = bounds.getWidth() / numControls;
+
+            // Layout knobs
+            for (int i = 0; i < knobs.size(); ++i)
+            {
+                auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
+                labels[i]->setBounds(controlBounds.removeFromTop(15));
+                knobs[i]->setBounds(controlBounds.removeFromTop(controlBounds.getHeight() - 20));
+            }
+
+            // Layout combos
+            for (int i = 0; i < combos.size(); ++i)
+            {
+                auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
+                int labelIdx = knobs.size() + i;
+                labels[labelIdx]->setBounds(controlBounds.removeFromTop(15));
+                combos[i]->setBounds(controlBounds.reduced(0, 20));
+            }
+
+            // Layout buttons
+            for (auto* button : buttons)
+            {
+                auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
+                button->setBounds(controlBounds);
+            }
+        }
+
+    private:
+        juce::String name;
+        juce::OwnedArray<juce::Slider> knobs;
+        juce::OwnedArray<juce::ComboBox> combos;
+        juce::OwnedArray<juce::ToggleButton> buttons;
+        juce::OwnedArray<juce::Label> labels;
+    };
 
     // Material Device Controls
+    DeviceSection materialSection;
     juce::ComboBox materialModeCombo;
     juce::Slider materialGainSlider, materialAttackSlider, materialReleaseSlider;
     juce::Label materialGainLabel, materialAttackLabel, materialReleaseLabel, materialModeLabel;
@@ -31,6 +118,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> materialReleaseAttachment;
 
     // Granular Device Controls
+    DeviceSection granularSection;
     juce::Slider granularSizeSlider, granularDensitySlider, granularPitchSlider, granularSpreadSlider, granularMixSlider;
     juce::Label granularSizeLabel, granularDensityLabel, granularPitchLabel, granularSpreadLabel, granularMixLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> granularSizeAttachment;
@@ -40,6 +128,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> granularMixAttachment;
 
     // Filter Device Controls
+    DeviceSection filterSection;
     juce::Slider filterFreqSlider, filterResSlider, filterMorphSlider, filterDecaySlider;
     juce::Label filterFreqLabel, filterResLabel, filterMorphLabel, filterDecayLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterFreqAttachment;
@@ -48,6 +137,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterDecayAttachment;
 
     // Distortion Device Controls
+    DeviceSection distortionSection;
     juce::Slider distDriveSlider, distBitcrushSlider, distCompressSlider, distNoiseSlider, distTiltSlider;
     juce::Label distDriveLabel, distBitcrushLabel, distCompressLabel, distNoiseLabel, distTiltLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distDriveAttachment;
@@ -57,6 +147,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distTiltAttachment;
 
     // Space Device Controls
+    DeviceSection spaceSection;
     juce::Slider spaceDelayTimeSlider, spaceDelayFeedbackSlider, spaceReverbSizeSlider, spaceReverbDampingSlider, spaceMixSlider;
     juce::ToggleButton spaceFreezeButton;
     juce::Label spaceDelayTimeLabel, spaceDelayFeedbackLabel, spaceReverbSizeLabel, spaceReverbDampingLabel, spaceMixLabel;
@@ -72,7 +163,7 @@ private:
     juce::Label masterVolumeLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> masterVolumeAttachment;
 
-    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText);
+    void setupRotaryKnob(juce::Slider& slider, juce::Label& label, const juce::String& labelText);
     void setupComboBox(juce::ComboBox& combo, juce::Label& label, const juce::String& labelText);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TorsoS4AudioProcessorEditor)
