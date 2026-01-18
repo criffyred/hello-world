@@ -34,31 +34,43 @@ jobs:
     - name: Build VST3
       run: |
         cd build
-        cmake --build . --config Release -j4
+        cmake --build . --config Release -j4 --verbose
 
     - name: List build artifacts
       run: |
-        echo "Build artifacts:"
-        find build -name "*.vst3" -type d
-        echo "---"
-        echo "Full directory structure:"
-        ls -R build/
+        echo "=== Searching for VST3 files ==="
+        find . -name "*.vst3" -type d -o -name "*.vst3" -type f
+        echo ""
+        echo "=== Searching for any TorsoS4 files ==="
+        find . -name "*TorsoS4*"
+        echo ""
+        echo "=== Build directory contents ==="
+        ls -la build/ || true
+        echo ""
+        echo "=== Looking for artefacts directory ==="
+        find build -type d -name "*artefact*" -o -type d -name "*artifact*" || true
 
     - name: Package VST3
       run: |
-        # Find the VST3 plugin
-        VST3_PATH=$(find build -name "TorsoS4.vst3" -type d | head -n 1)
+        # Find the VST3 plugin (search entire workspace)
+        VST3_PATH=$(find . -name "TorsoS4.vst3" -type d | head -n 1)
         if [ -z "$VST3_PATH" ]; then
           echo "Error: VST3 plugin not found!"
+          echo "Searching for any .vst3 files:"
+          find . -name "*.vst3"
+          echo "All files in build directory:"
+          find build -type f | head -50
           exit 1
         fi
         echo "Found VST3 at: $VST3_PATH"
 
         # Package it
-        VST3_DIR=$(dirname "$VST3_PATH")
-        cd "$VST3_DIR"
-        zip -r TorsoS4-macOS.zip TorsoS4.vst3
+        cd $(dirname "$VST3_PATH")
+        zip -r TorsoS4-macOS.zip $(basename "$VST3_PATH")
         mv TorsoS4-macOS.zip $GITHUB_WORKSPACE/
+
+        echo "VST3 packaged successfully!"
+        ls -lh $GITHUB_WORKSPACE/TorsoS4-macOS.zip
 
     - name: Upload VST3 artifact
       uses: actions/upload-artifact@v4
