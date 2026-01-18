@@ -48,23 +48,21 @@ private:
 
         void addKnob(juce::Slider* knob, juce::Label* label)
         {
-            knobs.add(knob);
-            labels.add(label);
+            controls.add({ControlType::Knob, knob, nullptr, nullptr, label});
             addAndMakeVisible(knob);
             addAndMakeVisible(label);
         }
 
         void addCombo(juce::ComboBox* combo, juce::Label* label)
         {
-            combos.add(combo);
-            labels.add(label);
+            controls.add({ControlType::Combo, nullptr, combo, nullptr, label});
             addAndMakeVisible(combo);
             addAndMakeVisible(label);
         }
 
         void addButton(juce::ToggleButton* button)
         {
-            buttons.add(button);
+            controls.add({ControlType::Button, nullptr, nullptr, button, nullptr});
             addAndMakeVisible(button);
         }
 
@@ -73,43 +71,49 @@ private:
             auto bounds = getLocalBounds();
             bounds.removeFromTop(25); // Space for title
 
-            int numControls = knobs.size() + combos.size() + buttons.size();
-            if (numControls == 0) return;
+            if (controls.isEmpty()) return;
 
-            int controlWidth = bounds.getWidth() / numControls;
+            int controlWidth = bounds.getWidth() / controls.size();
 
-            // Layout knobs
-            for (int i = 0; i < knobs.size(); ++i)
+            for (auto& control : controls)
             {
                 auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
-                labels[i]->setBounds(controlBounds.removeFromTop(15));
-                knobs[i]->setBounds(controlBounds.removeFromTop(controlBounds.getHeight() - 20));
-            }
 
-            // Layout combos
-            for (int i = 0; i < combos.size(); ++i)
-            {
-                auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
-                int labelIdx = knobs.size() + i;
-                labels[labelIdx]->setBounds(controlBounds.removeFromTop(15));
-                combos[i]->setBounds(controlBounds.reduced(0, 20));
-            }
-
-            // Layout buttons
-            for (auto* button : buttons)
-            {
-                auto controlBounds = bounds.removeFromLeft(controlWidth).reduced(5);
-                button->setBounds(controlBounds);
+                if (control.type == ControlType::Knob && control.knob != nullptr)
+                {
+                    if (control.label != nullptr)
+                        control.label->setBounds(controlBounds.removeFromTop(15));
+                    control.knob->setBounds(controlBounds);
+                }
+                else if (control.type == ControlType::Combo && control.combo != nullptr)
+                {
+                    if (control.label != nullptr)
+                        control.label->setBounds(controlBounds.removeFromTop(15));
+                    control.combo->setBounds(controlBounds.removeFromTop(25));
+                }
+                else if (control.type == ControlType::Button && control.button != nullptr)
+                {
+                    control.button->setBounds(controlBounds);
+                }
             }
         }
 
     private:
         juce::String name;
         juce::String icon;
-        juce::OwnedArray<juce::Slider> knobs;
-        juce::OwnedArray<juce::ComboBox> combos;
-        juce::OwnedArray<juce::ToggleButton> buttons;
-        juce::OwnedArray<juce::Label> labels;
+
+        enum class ControlType { Knob, Combo, Button };
+
+        struct Control
+        {
+            ControlType type;
+            juce::Slider* knob;
+            juce::ComboBox* combo;
+            juce::ToggleButton* button;
+            juce::Label* label;
+        };
+
+        juce::Array<Control> controls;
     };
 
     // Material Device Controls

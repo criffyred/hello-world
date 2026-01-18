@@ -20,6 +20,25 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
     // Waveform Display
     addAndMakeVisible(waveformDisplay);
 
+    // Connect waveform display to material device for sample loading
+    waveformDisplay.onFileLoaded = [this](const juce::File& file)
+    {
+        juce::AudioFormatManager formatManager;
+        formatManager.registerBasicFormats();
+
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+        if (reader != nullptr)
+        {
+            juce::AudioBuffer<float> tempBuffer;
+            tempBuffer.setSize(static_cast<int>(reader->numChannels),
+                             static_cast<int>(reader->lengthInSamples));
+            reader->read(&tempBuffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
+
+            // Load sample into Material Device
+            audioProcessor.getMaterialDevice().loadSample(tempBuffer);
+        }
+    };
+
     // Material Device Section
     addAndMakeVisible(materialSection);
 
