@@ -30,16 +30,20 @@ private:
     class DeviceSection : public juce::Component
     {
     public:
-        DeviceSection(const juce::String& deviceName) : name(deviceName) {}
+        DeviceSection(const juce::String& deviceName, const juce::String& deviceIcon)
+            : name(deviceName), icon(deviceIcon) {}
 
         void paint(juce::Graphics& g) override
         {
             auto bounds = getLocalBounds();
 
-            // Device name
+            // Device icon and name (S-4 style)
+            auto headerBounds = bounds.removeFromTop(25);
             g.setColour(juce::Colour(0xff00d4ff));
-            g.setFont(juce::Font(12.0f, juce::Font::bold));
-            g.drawText(name, bounds.removeFromTop(20), juce::Justification::centred);
+            g.setFont(juce::Font(16.0f, juce::Font::bold));
+            g.drawText(icon, headerBounds.removeFromLeft(30), juce::Justification::centred);
+            g.setFont(juce::Font(11.0f, juce::Font::bold));
+            g.drawText(name, headerBounds, juce::Justification::centredLeft);
         }
 
         void addKnob(juce::Slider* knob, juce::Label* label)
@@ -101,6 +105,7 @@ private:
 
     private:
         juce::String name;
+        juce::String icon;
         juce::OwnedArray<juce::Slider> knobs;
         juce::OwnedArray<juce::ComboBox> combos;
         juce::OwnedArray<juce::ToggleButton> buttons;

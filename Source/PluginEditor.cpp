@@ -6,11 +6,11 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
     : AudioProcessorEditor(&p),
       audioProcessor(p),
       parameters(vts),
-      materialSection("MATERIAL"),
-      granularSection("GRANULAR"),
-      filterSection("FILTER"),
-      distortionSection("DISTORTION"),
-      spaceSection("SPACE")
+      materialSection("MATERIAL", "|||•"),
+      granularSection("GRANULAR", "∴"),
+      filterSection("FILTER", "⌢"),
+      distortionSection("COLOR", "⌇"),
+      spaceSection("SPACE", "⌯")
 {
     // Apply custom look and feel
     setLookAndFeel(&torsoLookAndFeel);
