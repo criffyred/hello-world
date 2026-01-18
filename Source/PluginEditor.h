@@ -37,6 +37,10 @@ private:
         {
             auto bounds = getLocalBounds();
 
+            // DEBUG: Draw background to visualize bounds
+            g.setColour(juce::Colour(0xff1a1a1a));
+            g.fillRect(bounds);
+
             // Device icon and name (S-4 style)
             auto headerBounds = bounds.removeFromTop(25);
             g.setColour(juce::Colour(0xff00d4ff));
@@ -44,6 +48,10 @@ private:
             g.drawText(icon, headerBounds.removeFromLeft(30), juce::Justification::centred);
             g.setFont(juce::Font(11.0f, juce::Font::bold));
             g.drawText(name, headerBounds, juce::Justification::centredLeft);
+
+            // DEBUG: Draw control count
+            g.setColour(juce::Colours::red);
+            g.drawText("Controls: " + juce::String(controls.size()), bounds, juce::Justification::topRight);
         }
 
         void addKnob(juce::Slider* knob, juce::Label* label)
