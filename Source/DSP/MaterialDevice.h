@@ -6,8 +6,9 @@
  * Material Device - Tape recorder/looping OR polyphonic sampler
  *
  * Features:
- * - Tape mode: Live recording, looping, overdubbing
- * - Poly mode: 8-voice polyphonic sampler with MIDI control
+ * - Tape mode: Live recording, looping, overdubbing with varispeed
+ * - Poly mode: 8-voice polyphonic sampler with MIDI control playing actual samples
+ * - Bypass mode: Pass audio through unprocessed
  */
 class MaterialDevice
 {
@@ -19,25 +20,35 @@ public:
     void process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages,
                  juce::AudioProcessorValueTreeState& parameters);
 
+    // Load a sample for poly mode
+    void loadSample(const juce::AudioBuffer<float>& sampleToLoad);
+    void setSampleData(const float* const* sampleData, int numChannels, int numSamples);
+
 private:
+    // Shared sample buffer for poly mode
+    juce::AudioBuffer<float> sampleBuffer;
+    int sampleLength = 0;
+
     // Sampler for Poly mode
     juce::Synthesiser polySampler;
 
-    // Tape loop buffer (6 minutes at 48kHz = ~17.3 million samples)
+    // Tape loop buffer (6 minutes at 48kHz)
     juce::AudioBuffer<float> tapeBuffer;
     int tapeWritePosition = 0;
     int tapeReadPosition = 0;
-    bool tapeRecording = false;
-    bool tapeLooping = false;
+    float tapeSpeed = 1.0f;
+    bool tapeRecording = true;
+    bool tapeLooping = true;
 
     // Sample rate and spec
     double currentSampleRate = 44100.0;
     int maxTapeLengthSamples = 0;
 
-    // ADSR for poly mode
-    struct PolySamplerVoice : public juce::SynthesiserVoice
+    // Polyphonic Sample Voice - actually plays loaded samples
+    class SampleVoice : public juce::SynthesiserVoice
     {
-        PolySamplerVoice();
+    public:
+        SampleVoice(const juce::AudioBuffer<float>& sampleBufferToUse);
 
         bool canPlaySound(juce::SynthesiserSound*) override;
         void startNote(int midiNoteNumber, float velocity,
@@ -48,18 +59,22 @@ private:
         void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
         void setADSR(float attack, float release);
+        void updateSampleBuffer(const juce::AudioBuffer<float>& newBuffer);
 
     private:
+        const juce::AudioBuffer<float>& sampleBuffer;
         juce::ADSR adsr;
         juce::ADSR::Parameters adsrParams;
-        double currentAngle = 0.0;
-        double angleDelta = 0.0;
+
+        double sourceSamplePosition = 0.0;
+        double pitchRatio = 1.0;
         double level = 0.0;
     };
 
-    struct PolySamplerSound : public juce::SynthesiserSound
+    class SampleSound : public juce::SynthesiserSound
     {
-        PolySamplerSound() {}
+    public:
+        SampleSound() {}
         bool appliesToNote(int) override { return true; }
         bool appliesToChannel(int) override { return true; }
     };

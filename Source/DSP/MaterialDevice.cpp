@@ -2,11 +2,16 @@
 
 MaterialDevice::MaterialDevice()
 {
+    // Initialize with a default 1-second silent buffer
+    sampleBuffer.setSize(2, 44100);
+    sampleBuffer.clear();
+    sampleLength = 44100;
+
     // Initialize poly sampler with 8 voices
     for (int i = 0; i < 8; ++i)
-        polySampler.addVoice(new PolySamplerVoice());
+        polySampler.addVoice(new SampleVoice(sampleBuffer));
 
-    polySampler.addSound(new PolySamplerSound());
+    polySampler.addSound(new SampleSound());
 }
 
 void MaterialDevice::prepare(const juce::dsp::ProcessSpec& spec)
@@ -29,10 +34,35 @@ void MaterialDevice::reset()
     polySampler.allNotesOff(0, false);
 }
 
+void MaterialDevice::loadSample(const juce::AudioBuffer<float>& sampleToLoad)
+{
+    sampleBuffer.makeCopyOf(sampleToLoad);
+    sampleLength = sampleToLoad.getNumSamples();
+
+    // Update all voices with new sample buffer
+    for (int i = 0; i < polySampler.getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<SampleVoice*>(polySampler.getVoice(i)))
+        {
+            voice->updateSampleBuffer(sampleBuffer);
+        }
+    }
+}
+
+void MaterialDevice::setSampleData(const float* const* sampleData, int numChannels, int numSamples)
+{
+    sampleBuffer.setSize(numChannels, numSamples);
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        sampleBuffer.copyFrom(ch, 0, sampleData[ch], numSamples);
+    }
+    sampleLength = numSamples;
+}
+
 void MaterialDevice::process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages,
                              juce::AudioProcessorValueTreeState& parameters)
 {
-    auto mode = parameters.getRawParameterValue("material_mode")->load();
+    auto mode = static_cast<int>(parameters.getRawParameterValue("material_mode")->load());
     auto gain = parameters.getRawParameterValue("material_gain")->load();
     auto attack = parameters.getRawParameterValue("material_poly_attack")->load();
     auto release = parameters.getRawParameterValue("material_poly_release")->load();
@@ -41,17 +71,24 @@ void MaterialDevice::process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&
 
     if (mode == 0) // Tape mode
     {
-        // Simple tape looping - record input and play back
+        // Tape looping with varispeed
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            // Read from tape
+            // Read from tape with speed control
             for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
             {
-                float tapeSample = tapeBuffer.getSample(ch, tapeReadPosition);
+                // Linear interpolation for smooth tape playback
+                int pos1 = static_cast<int>(tapeReadPosition);
+                int pos2 = (pos1 + 1) % maxTapeLengthSamples;
+                float frac = tapeReadPosition - static_cast<float>(pos1);
+
+                float tapeSample = tapeBuffer.getSample(ch, pos1) * (1.0f - frac) +
+                                 tapeBuffer.getSample(ch, pos2) * frac;
+
                 float inputSample = buffer.getSample(ch, sample);
 
-                // Mix tape playback with input
-                buffer.setSample(ch, sample, (tapeSample + inputSample) * gain);
+                // Mix tape playback with input (overdub mode)
+                buffer.setSample(ch, sample, (tapeSample + inputSample * 0.5f) * gain);
 
                 // Write to tape (overdub mode)
                 if (tapeRecording)
@@ -61,61 +98,73 @@ void MaterialDevice::process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&
                 }
             }
 
-            // Advance tape positions
-            tapeReadPosition = (tapeReadPosition + 1) % maxTapeLengthSamples;
+            // Advance tape positions with speed control
+            tapeReadPosition += tapeSpeed;
+            if (tapeReadPosition >= maxTapeLengthSamples)
+                tapeReadPosition -= maxTapeLengthSamples;
+            if (tapeReadPosition < 0)
+                tapeReadPosition += maxTapeLengthSamples;
+
             if (tapeRecording)
                 tapeWritePosition = (tapeWritePosition + 1) % maxTapeLengthSamples;
         }
     }
-    else // Poly mode (mode == 1)
+    else if (mode == 1) // Poly mode - play actual samples
     {
         // Update ADSR for all voices
         for (int i = 0; i < polySampler.getNumVoices(); ++i)
         {
-            if (auto* voice = dynamic_cast<PolySamplerVoice*>(polySampler.getVoice(i)))
+            if (auto* voice = dynamic_cast<SampleVoice*>(polySampler.getVoice(i)))
             {
                 voice->setADSR(attack, release);
             }
         }
 
-        // Render polyphonic sampler
+        // Clear buffer for polyphonic rendering
+        buffer.clear();
+
+        // Render polyphonic sampler with actual sample playback
         polySampler.renderNextBlock(buffer, midiMessages, 0, numSamples);
 
         // Apply gain
         buffer.applyGain(gain);
     }
+    // else mode == 2: Bypass - do nothing, audio passes through
 }
 
 //==============================================================================
-// PolySamplerVoice implementation
+// SampleVoice implementation - ACTUALLY plays samples with pitch shifting
 
-MaterialDevice::PolySamplerVoice::PolySamplerVoice()
+MaterialDevice::SampleVoice::SampleVoice(const juce::AudioBuffer<float>& sampleBufferToUse)
+    : sampleBuffer(sampleBufferToUse)
 {
     adsrParams.attack = 0.01f;
     adsrParams.decay = 0.1f;
     adsrParams.sustain = 1.0f;
     adsrParams.release = 0.1f;
+    adsr.setParameters(adsrParams);
 }
 
-bool MaterialDevice::PolySamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
+bool MaterialDevice::SampleVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
-    return dynamic_cast<PolySamplerSound*>(sound) != nullptr;
+    return dynamic_cast<SampleSound*>(sound) != nullptr;
 }
 
-void MaterialDevice::PolySamplerVoice::startNote(int midiNoteNumber, float velocity,
-                                                 juce::SynthesiserSound*, int /*currentPitchWheelPosition*/)
+void MaterialDevice::SampleVoice::startNote(int midiNoteNumber, float velocity,
+                                           juce::SynthesiserSound*, int /*currentPitchWheelPosition*/)
 {
-    currentAngle = 0.0;
-    level = velocity * 0.15;
+    sourceSamplePosition = 0.0;
+    level = velocity;
 
-    auto cyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-    auto cyclesPerSample = cyclesPerSecond / getSampleRate();
-    angleDelta = cyclesPerSample * 2.0 * juce::MathConstants<double>::pi;
+    // Calculate pitch ratio for sample playback
+    // Assuming middle C (MIDI 60) plays at original speed
+    auto pitchInSemitones = static_cast<double>(midiNoteNumber - 60);
+    pitchRatio = std::pow(2.0, pitchInSemitones / 12.0);
 
     adsr.noteOn();
 }
 
-void MaterialDevice::PolySamplerVoice::stopNote(float /*velocity*/, bool allowTailOff)
+void MaterialDevice::SampleVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
     if (allowTailOff)
     {
@@ -124,42 +173,69 @@ void MaterialDevice::PolySamplerVoice::stopNote(float /*velocity*/, bool allowTa
     else
     {
         clearCurrentNote();
-        angleDelta = 0.0;
+        sourceSamplePosition = 0.0;
     }
 }
 
-void MaterialDevice::PolySamplerVoice::pitchWheelMoved(int /*newPitchWheelValue*/)
+void MaterialDevice::SampleVoice::pitchWheelMoved(int /*newPitchWheelValue*/)
+{
+    // Could implement pitch bend here
+}
+
+void MaterialDevice::SampleVoice::controllerMoved(int /*controllerNumber*/, int /*newControllerValue*/)
 {
 }
 
-void MaterialDevice::PolySamplerVoice::controllerMoved(int /*controllerNumber*/, int /*newControllerValue*/)
+void MaterialDevice::SampleVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
+                                                  int startSample, int numSamples)
 {
-}
+    if (sampleBuffer.getNumSamples() == 0)
+        return;
 
-void MaterialDevice::PolySamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
-                                                       int startSample, int numSamples)
-{
-    if (angleDelta != 0.0)
+    auto numChannels = outputBuffer.getNumChannels();
+    auto sampleLength = sampleBuffer.getNumSamples();
+
+    while (--numSamples >= 0)
     {
-        while (--numSamples >= 0)
+        auto envValue = adsr.getNextSample();
+
+        if (sourceSamplePosition < sampleLength && envValue > 0.0f)
         {
-            auto currentSample = (float)(std::sin(currentAngle) * level * adsr.getNextSample());
+            // Linear interpolation for smooth pitch shifting
+            auto pos = static_cast<int>(sourceSamplePosition);
+            auto nextPos = pos + 1;
+            auto frac = static_cast<float>(sourceSamplePosition - pos);
 
-            for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
-                outputBuffer.addSample(i, startSample, currentSample);
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                auto sample1 = (pos < sampleLength) ? sampleBuffer.getSample(ch % sampleBuffer.getNumChannels(), pos) : 0.0f;
+                auto sample2 = (nextPos < sampleLength) ? sampleBuffer.getSample(ch % sampleBuffer.getNumChannels(), nextPos) : 0.0f;
 
-            currentAngle += angleDelta;
-            ++startSample;
+                auto currentSample = sample1 + frac * (sample2 - sample1);
+                outputBuffer.addSample(ch, startSample, currentSample * envValue * level);
+            }
 
+            sourceSamplePosition += pitchRatio;
+        }
+        else
+        {
             if (!adsr.isActive())
                 stopNote(0.0f, false);
         }
+
+        ++startSample;
     }
 }
 
-void MaterialDevice::PolySamplerVoice::setADSR(float attack, float release)
+void MaterialDevice::SampleVoice::setADSR(float attack, float release)
 {
     adsrParams.attack = attack;
     adsrParams.release = release;
     adsr.setParameters(adsrParams);
+}
+
+void MaterialDevice::SampleVoice::updateSampleBuffer(const juce::AudioBuffer<float>& /*newBuffer*/)
+{
+    // Sample buffer is a const reference, so it automatically updates
+    // when the parent MaterialDevice updates its sampleBuffer
 }
