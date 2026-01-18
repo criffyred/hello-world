@@ -52,8 +52,8 @@ jobs:
 
     - name: Package VST3
       run: |
-        # Find the VST3 plugin (search entire workspace)
-        VST3_PATH=$(find . -name "TorsoS4.vst3" -type d | head -n 1)
+        # Find the VST3 plugin (search entire workspace, account for spaces in filename)
+        VST3_PATH=$(find . -name "*.vst3" -type d -path "*/VST3/*" | head -n 1)
         if [ -z "$VST3_PATH" ]; then
           echo "Error: VST3 plugin not found!"
           echo "Searching for any .vst3 files:"
@@ -66,7 +66,7 @@ jobs:
 
         # Package it
         cd $(dirname "$VST3_PATH")
-        zip -r TorsoS4-macOS.zip $(basename "$VST3_PATH")
+        zip -r TorsoS4-macOS.zip "$(basename "$VST3_PATH")"
         mv TorsoS4-macOS.zip $GITHUB_WORKSPACE/
 
         echo "VST3 packaged successfully!"
