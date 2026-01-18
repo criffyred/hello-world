@@ -40,11 +40,23 @@ jobs:
       run: |
         echo "Build artifacts:"
         find build -name "*.vst3" -type d
-        ls -R build/TorsoS4_artefacts/
+        echo "---"
+        echo "Full directory structure:"
+        ls -R build/
 
     - name: Package VST3
       run: |
-        cd build/TorsoS4_artefacts/Release/VST3
+        # Find the VST3 plugin
+        VST3_PATH=$(find build -name "TorsoS4.vst3" -type d | head -n 1)
+        if [ -z "$VST3_PATH" ]; then
+          echo "Error: VST3 plugin not found!"
+          exit 1
+        fi
+        echo "Found VST3 at: $VST3_PATH"
+
+        # Package it
+        VST3_DIR=$(dirname "$VST3_PATH")
+        cd "$VST3_DIR"
         zip -r TorsoS4-macOS.zip TorsoS4.vst3
         mv TorsoS4-macOS.zip $GITHUB_WORKSPACE/
 
