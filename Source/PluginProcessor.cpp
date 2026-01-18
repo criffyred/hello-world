@@ -31,7 +31,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout TorsoS4AudioProcessor::creat
     // Material Device Parameters
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "material_mode", "Material Mode",
-        juce::StringArray{"Tape", "Poly"}, 0));
+        juce::StringArray{"Tape", "Poly", "Bypass"}, 0));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "material_gain", "Material Gain",
         juce::NormalisableRange<float>(0.0f, 2.0f), 1.0f));
@@ -72,6 +72,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout TorsoS4AudioProcessor::creat
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "filter_decay", "Filter Decay",
         juce::NormalisableRange<float>(0.01f, 10.0f, 0.0f, 0.3f), 0.5f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "filter_mix", "Filter Mix",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f));
 
     // Distortion Device Parameters
     layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -89,6 +92,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout TorsoS4AudioProcessor::creat
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "dist_tilt", "Tilt Balance",
         juce::NormalisableRange<float>(-1.0f, 1.0f), 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "dist_mix", "Distortion Mix",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f));
 
     // Space Device Parameters
     layout.add(std::make_unique<juce::AudioParameterFloat>(

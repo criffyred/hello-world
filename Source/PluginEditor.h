@@ -134,22 +134,24 @@ private:
 
     // Filter Device Controls
     DeviceSection filterSection;
-    juce::Slider filterFreqSlider, filterResSlider, filterMorphSlider, filterDecaySlider;
-    juce::Label filterFreqLabel, filterResLabel, filterMorphLabel, filterDecayLabel;
+    juce::Slider filterFreqSlider, filterResSlider, filterMorphSlider, filterDecaySlider, filterMixSlider;
+    juce::Label filterFreqLabel, filterResLabel, filterMorphLabel, filterDecayLabel, filterMixLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterFreqAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterResAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterMorphAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterDecayAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterMixAttachment;
 
     // Distortion Device Controls
     DeviceSection distortionSection;
-    juce::Slider distDriveSlider, distBitcrushSlider, distCompressSlider, distNoiseSlider, distTiltSlider;
-    juce::Label distDriveLabel, distBitcrushLabel, distCompressLabel, distNoiseLabel, distTiltLabel;
+    juce::Slider distDriveSlider, distBitcrushSlider, distCompressSlider, distNoiseSlider, distTiltSlider, distMixSlider;
+    juce::Label distDriveLabel, distBitcrushLabel, distCompressLabel, distNoiseLabel, distTiltLabel, distMixLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distDriveAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distBitcrushAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distCompressAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distNoiseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distTiltAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> distMixAttachment;
 
     // Space Device Controls
     DeviceSection spaceSection;

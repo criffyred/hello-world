@@ -46,9 +46,18 @@ void DistortionDevice::process(juce::AudioBuffer<float>& buffer, juce::AudioProc
     auto compress = parameters.getRawParameterValue("dist_compress")->load();
     auto noise = parameters.getRawParameterValue("dist_noise")->load();
     auto tilt = parameters.getRawParameterValue("dist_tilt")->load();
+    auto mix = parameters.getRawParameterValue("dist_mix")->load();
 
     int numSamples = buffer.getNumSamples();
     int numChannels = buffer.getNumChannels();
+
+    // If mix is 0, bypass processing entirely
+    if (mix <= 0.0f)
+        return;
+
+    // Store dry signal for mixing
+    juce::AudioBuffer<float> dryBuffer;
+    dryBuffer.makeCopyOf(buffer);
 
     // Apply drive/distortion
     if (drive > 0.01f)
@@ -138,6 +147,17 @@ void DistortionDevice::process(juce::AudioBuffer<float>& buffer, juce::AudioProc
                 rightData[i] = tiltLowShelfRight.processSample(rightData[i]);
                 rightData[i] = tiltHighShelfRight.processSample(rightData[i]);
             }
+        }
+    }
+
+    // Mix dry and wet signals
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            float dry = dryBuffer.getSample(ch, sample);
+            float wet = buffer.getSample(ch, sample);
+            buffer.setSample(ch, sample, dry * (1.0f - mix) + wet * mix);
         }
     }
 }

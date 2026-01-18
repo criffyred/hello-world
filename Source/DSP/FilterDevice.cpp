@@ -95,9 +95,18 @@ void FilterDevice::process(juce::AudioBuffer<float>& buffer, juce::AudioProcesso
     auto resonance = parameters.getRawParameterValue("filter_resonance")->load();
     auto morph = parameters.getRawParameterValue("filter_morph")->load();
     auto decay = parameters.getRawParameterValue("filter_decay")->load();
+    auto mix = parameters.getRawParameterValue("filter_mix")->load();
 
     int numSamples = buffer.getNumSamples();
     int numChannels = juce::jmin(buffer.getNumChannels(), 2);
+
+    // If mix is 0, bypass processing entirely
+    if (mix <= 0.0f)
+        return;
+
+    // Store dry signal for mixing
+    juce::AudioBuffer<float> dryBuffer;
+    dryBuffer.makeCopyOf(buffer);
 
     // Calculate Q factor from resonance and decay
     float q = juce::jlimit(0.1f, 20.0f, resonance * (1.0f + decay * 4.0f));
@@ -147,6 +156,17 @@ void FilterDevice::process(juce::AudioBuffer<float>& buffer, juce::AudioProcesso
         for (int sample = 0; sample < numSamples; ++sample)
         {
             channelData[sample] = filteredOutput[sample] * normalizationFactor * 2.0f; // 2.0x boost for presence
+        }
+    }
+
+    // Mix dry and wet signals
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            float dry = dryBuffer.getSample(ch, sample);
+            float wet = buffer.getSample(ch, sample);
+            buffer.setSample(ch, sample, dry * (1.0f - mix) + wet * mix);
         }
     }
 

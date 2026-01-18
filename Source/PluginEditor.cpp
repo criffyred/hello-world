@@ -25,6 +25,7 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
 
     materialModeCombo.addItem("Tape", 1);
     materialModeCombo.addItem("Poly", 2);
+    materialModeCombo.addItem("Bypass", 3);
     setupComboBox(materialModeCombo, materialModeLabel, "Mode");
     materialSection.addCombo(&materialModeCombo, &materialModeLabel);
     materialModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(parameters, "material_mode", materialModeCombo);
@@ -83,6 +84,10 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
     filterSection.addKnob(&filterDecaySlider, &filterDecayLabel);
     filterDecayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_decay", filterDecaySlider);
 
+    setupRotaryKnob(filterMixSlider, filterMixLabel, "Mix");
+    filterSection.addKnob(&filterMixSlider, &filterMixLabel);
+    filterMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "filter_mix", filterMixSlider);
+
     // Distortion Device Section
     addAndMakeVisible(distortionSection);
 
@@ -105,6 +110,10 @@ TorsoS4AudioProcessorEditor::TorsoS4AudioProcessorEditor(TorsoS4AudioProcessor& 
     setupRotaryKnob(distTiltSlider, distTiltLabel, "Tilt");
     distortionSection.addKnob(&distTiltSlider, &distTiltLabel);
     distTiltAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_tilt", distTiltSlider);
+
+    setupRotaryKnob(distMixSlider, distMixLabel, "Mix");
+    distortionSection.addKnob(&distMixSlider, &distMixLabel);
+    distMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, "dist_mix", distMixSlider);
 
     // Space Device Section
     addAndMakeVisible(spaceSection);
