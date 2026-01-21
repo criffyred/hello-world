@@ -2,9 +2,15 @@
 
 A fast-paced, retro pixel-art trading simulator with arcade aesthetics! Trade candy futures, leverage positions, and compete for high scores!
 
+## 💻 Platform Support
+
+✅ **macOS** (Intel & Apple Silicon)
+✅ **Windows**
+✅ **Linux**
+
 ## 🎮 How to Play
 
-### Quick Start
+### Quick Start (macOS/Linux/Windows)
 
 ```bash
 # Install dependencies (if not already done)
@@ -15,6 +21,23 @@ npm run dev
 ```
 
 Then open your browser to `http://localhost:5173` to play!
+
+### macOS Setup (First Time)
+
+If you don't have Node.js installed:
+
+```bash
+# Using Homebrew (recommended)
+brew install node
+
+# Verify installation
+node --version
+npm --version
+
+# Then run the game
+npm install
+npm run dev
+```
 
 ## 🕹️ Game Instructions
 
